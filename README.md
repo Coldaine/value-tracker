@@ -44,6 +44,10 @@ npm run lint       # eslint
 npm run snapshot   # append today's prices and value ranges to src/data/snapshots.json
 ```
 
+With Bun installed, `bun test` runs the settings and scoring boundary tests without extra dependencies.
+The default-metrics fixture records the results before settings validation; zero API value intentionally
+produces zero output capacity and an infinite cost per output, which the existing formatter displays as `n/a`.
+
 Built with [Next.js](https://nextjs.org) 16, React 19, Tailwind CSS 4 and TypeScript. There is no backend or database: all
 data is static JSON in `src/data/`.
 

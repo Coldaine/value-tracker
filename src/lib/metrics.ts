@@ -1,5 +1,7 @@
 import { modelById, plans, vendorById } from "./data";
 import type { Model, Plan, PlanMetrics, Settings } from "./types";
+import { normalizeSettings } from "./settings";
+export { DEFAULT_SETTINGS } from "./settings";
 
 /**
  * Reference agentic-coding workload, per 1M output tokens. Agent loops re-read
@@ -7,13 +9,6 @@ import type { Model, Plan, PlanMetrics, Settings } from "./types";
  * documented on the Methodology page.
  */
 export const WORKLOAD = { cacheReadPerOut: 40, cacheWritePerOut: 2, freshInputPerOut: 4 };
-
-export const DEFAULT_SETTINGS: Settings = {
-  scenario: "high",
-  basisFilter: "all",
-  weights: { value: 40, intel: 35, capacity: 25 },
-  overrides: {},
-};
 
 /** USD to produce 1M output tokens (plus the context an agent reads to get there). */
 export function allInCostPerMOut(m: Model): number | null {
@@ -42,15 +37,22 @@ const ANCHORS = {
   intel: [30, 58] as const,
 };
 
-export function computeMetrics(settings: Settings, list: Plan[] = plans): PlanMetrics[] {
+export function computeMetrics(input: Settings, list: Plan[] = plans): PlanMetrics[] {
+  const settings = normalizeSettings(input);
   const fallback = modelById(FALLBACK_TOKEN_MODEL_ID)!;
-  const w = settings.weights;
+  let w = settings.weights;
+  const maxWeight = Math.max(w.value, w.intel, w.capacity);
+  // A common factor cancels in the weighted mean. Scale only extreme finite
+  // inputs so the sum and multiplication by 100 cannot overflow.
+  if (maxWeight > Number.MAX_VALUE / 300) {
+    w = { value: w.value / maxWeight, intel: w.intel / maxWeight, capacity: w.capacity / maxWeight };
+  }
 
   const rows = list
     .filter((p) => settings.basisFilter === "all" || p.basis === "published")
     .map((plan) => {
       const override = settings.overrides[plan.id];
-      const overridden = typeof override === "number" && override >= 0;
+      const overridden = override !== undefined;
       const apiValue = overridden ? override : plan.apiValue[settings.scenario];
       const multiple = apiValue / plan.price;
       const topModel = modelById(plan.topModelId);
@@ -77,6 +79,7 @@ export function computeMetrics(settings: Settings, list: Plan[] = plans): PlanMe
         multiple,
         subsidyPct: (multiple - 1) * 100,
         outputTokensM,
+        // Zero API value buys no output: Infinity is rendered as n/a by usd().
         costPerMOut: plan.price / outputTokensM,
         intel,
         topModel,
