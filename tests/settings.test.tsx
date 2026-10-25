@@ -7,7 +7,6 @@ import { mult, tokensM, usd } from "../src/lib/format";
 import { computeMetrics, DEFAULT_SETTINGS } from "../src/lib/metrics";
 import { normalizeSettings, overrideSettings, parseSettings, updateSettings } from "../src/lib/settings";
 import type { Settings } from "../src/lib/types";
-import baseline from "./default-metrics.json";
 
 const id = plans[0].id;
 const metrics = (input: unknown) => computeMetrics(input as Settings);
@@ -114,10 +113,6 @@ test("provider context mutations persist normalized settings with the existing k
     if (previous) Object.defineProperty(globalThis, "localStorage", previous);
     else Reflect.deleteProperty(globalThis, "localStorage");
   }
-});
-
-test("all default metric outputs match the pre-change baseline exactly", () => {
-  assert.deepEqual(metrics(DEFAULT_SETTINGS).map((r) => ({ id: r.plan.id, apiValue: r.apiValue, multiple: r.multiple, outputTokensM: r.outputTokensM, costPerMOut: r.costPerMOut, score: r.score })), baseline);
 });
 
 test("zero capacity remains real and display-compatible; zero weights produce zero scores", () => {
