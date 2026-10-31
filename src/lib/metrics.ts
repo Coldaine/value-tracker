@@ -51,7 +51,10 @@ export function computeMetrics(input: Settings, list: Plan[] = plans): PlanMetri
   const rows = list
     .filter((p) => settings.basisFilter === "all" || p.basis === "published")
     .map((plan) => {
-      const override = settings.overrides[plan.id];
+      // Own properties only: an inherited key such as "toString" is not an override.
+      const override = Object.prototype.hasOwnProperty.call(settings.overrides, plan.id)
+        ? settings.overrides[plan.id]
+        : undefined;
       const overridden = override !== undefined;
       const apiValue = overridden ? override : plan.apiValue[settings.scenario];
       const multiple = apiValue / plan.price;

@@ -138,3 +138,10 @@ test("extreme finite weights do not overflow the weighted mean", () => {
   const equalWeights = metrics({ weights: { value: 1, intel: 1, capacity: 1 } });
   for (let i = 1; i < rows.length; i++) assert.equal(rows[i].score, equalWeights[i].score);
 });
+
+test("an inherited key such as toString is not treated as an override", () => {
+  const plan = { ...plans[0], id: "toString" };
+  const [row] = computeMetrics(DEFAULT_SETTINGS, [plan]);
+  assert.equal(row.overridden, false);
+  assert.ok(Number.isFinite(row.apiValue));
+});
