@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useMemo, useSyncExternalStore } from "react";
-import { DEFAULT_SETTINGS } from "@/lib/metrics";
+import { DEFAULT_SETTINGS, overrideSettings, parseSettings, updateSettings } from "@/lib/settings";
 import type { Settings } from "@/lib/types";
 
 interface Ctx {
@@ -57,28 +57,15 @@ function subscribe(cb: () => void) {
   };
 }
 
-function parse(raw: string | null): Settings {
-  if (!raw) return DEFAULT_SETTINGS;
-  try {
-    return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
-  } catch {
-    return DEFAULT_SETTINGS;
-  }
-}
-
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const raw = useSyncExternalStore(subscribe, read, () => null);
-  const settings = useMemo(() => parse(raw), [raw]);
+  const settings = useMemo(() => parseSettings(raw), [raw]);
 
   const update = useCallback((patch: Partial<Settings>) => {
-    write(JSON.stringify({ ...parse(read()), ...patch }));
+    write(JSON.stringify(updateSettings(parseSettings(read()), patch)));
   }, []);
   const setOverride = useCallback((planId: string, value: number | null) => {
-    const cur = parse(read());
-    const overrides = { ...cur.overrides };
-    if (value == null || Number.isNaN(value)) delete overrides[planId];
-    else overrides[planId] = value;
-    write(JSON.stringify({ ...cur, overrides }));
+    write(JSON.stringify(overrideSettings(parseSettings(read()), planId, value)));
   }, []);
   const reset = useCallback(() => write(null), []);
   const isCustomised = raw != null && JSON.stringify(settings) !== JSON.stringify(DEFAULT_SETTINGS);
